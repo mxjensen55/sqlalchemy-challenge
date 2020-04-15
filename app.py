@@ -2,8 +2,7 @@
   
 import numpy as np
 from datetime import datetime
-import datetime as dt 
-import pandas as pd     
+
 
 import sqlalchemy
 from sqlalchemy.ext.automap import automap_base
@@ -40,15 +39,15 @@ def welcome():
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
         f"/api/v1.0/<start><br/>"
-        f"Enter the start date in 'YYYY-MM-DD' format<br/>"
         f"/api/v1.0/<start>/<end><br/>"
-        f"Enter the dates in 'YYYY-MM-DD'/'YYYY-MM-DD' format"
     )
 
 @app.route("/api/v1.0/precipitation")
 def precipitation():
 
-    results = session.query(Measurement.date, Measurement.prcp).all()
+    results = (session.query(Measurement.date, Measurement.prcp)
+              .filter(Measurement.date >= "2016-08-23")
+              .all())
 
     all_precipitation = []
     for date, prcp in results:
@@ -87,12 +86,8 @@ def tobs():
 @app.route("/api/v1.0/<start>")
 def trip_start(start):
 
-
-    start_date= datetime.strptime(start, '%Y-%m-%d')
-    end_date = dt.datetime(2017,8, 23)
     trip_data = (session.query(func.min(Measurement.tobs).label('TMin'), func.max(Measurement.tobs).label('TMax'), func.avg(Measurement.tobs).label('TAvg'))
-                .filter(func.strftime("%Y-%m-%d", Measurement.date) >= start_date)
-                .filter(func.strftime("%Y-%m-%d", Measurement.date) <= end_date)
+                .filter(func.strftime("%Y-%m-%d", Measurement.date) >= start)
                 .all())
 
     start_stats=[]
@@ -109,16 +104,13 @@ def trip_start(start):
 @app.route("/api/v1.0/<start>/<end>")
 def calc_stats(start, end):
 
-    start_date= datetime.strptime(start, '%Y-%m-%d')
-    end_date =  datetime.strptime(end, '%Y-%m-%d')
-
     trip_data = (session.query(func.min(Measurement.tobs).label('TMin'), func.max(Measurement.tobs).label('TMax'), func.avg(Measurement.tobs).label('TAvg'))
-                    .filter(Measurement.date >= start_date)
-                    .filter(Measurement.date <= end_date)
+                    .filter(func.strftime("%Y-%m-%d", Measurement.date) >= start)
+                    .filter(func.strftime("%Y-%m-%d", Measurement.date) >= end)
                     .all())
 
     begin_end_stats = []
-    
+
     for Tmin, Tmax, Tavg in trip_data:
         begin_end_stats_dict = {}
         begin_end_stats_dict["Minimum Temp"] = Tmin
